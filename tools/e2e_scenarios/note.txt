@@ -1,0 +1,35 @@
+`tools/evcc_emulator.py`
+Simulates an EV charging controller talking ISO 15118-20 over TCP.
+
+    # Syntax
+    ./tools/evcc_emulator.py --scenario <scenario.json> --host <ip> --port <port>
+    
+    # Example (when EXI payloads are populated)
+    ./tools/evcc_emulator.py --scenario tools/e2e_scenarios/smoke.json --host 127.0.0.1 --port 50000
+
+Scenario JSON format:
+    [
+      {"action": "send",    "payload_type": "0x8001", "exi_hex": "01fe..."},
+      {"action": "expect",  "payload_type": "0x8001"},
+      {"action": "wait",    "duration": 0.5},
+      {"action": "close"}
+    ]
+
+Actions: send (V2GTP-framed EXI hex), expect (verify response payload type), wait, close.
+
+The directory is empty because real EXI payloads need the libcbv2g encoder. The scenarios are JSON arrays like:
+
+    [
+      {"comment": "SupportedAppProtocolReq", "action": "send", "payload_type": "0x8001", "exi_hex": "01fe..."},
+      {"action": "expect", "payload_type": "0x8001"},
+      {"action": "close"}
+    ]
+
+To populate "exi_hex" with real bytes, build the libiso15118 EXI test encoder:
+
+    cd ~/workspace/libiso15118.git/build
+    cmake --build . --target test_exi_cb_iso20
+    # Then use its output to extract EXI payloads for each message
+
+The EVCC emulator (tools/evcc_emulator.py) is otherwise fully functional — it reads any scenario JSON, frames V2GTP, and validates
+response types. Once you populate real EXI hex values, you can run:
