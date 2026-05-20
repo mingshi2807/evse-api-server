@@ -1,15 +1,15 @@
-use std::sync::Arc;
-use std::time::Instant;
 use axum::{
     Router,
-    extract::ws::{Message, WebSocket, WebSocketUpgrade},
     extract::State,
+    extract::ws::{Message, WebSocket, WebSocketUpgrade},
     response::Json,
     routing::get,
 };
+use evse_api_core::{manager::SessionManager, protocol::Command, session::Session};
 use serde_json::json;
+use std::sync::Arc;
+use std::time::Instant;
 use tokio::sync::mpsc;
-use evse_api_core::{manager::SessionManager, session::Session, protocol::Command};
 
 pub struct AppState {
     pub manager: Arc<SessionManager>,
@@ -64,16 +64,24 @@ async fn handle_ws(mut socket: WebSocket, state: Arc<AppState>) {
         }
     };
 
-    if let Err(e) = state.manager.add_session(session_id.clone(), session, api_tx).await {
+    if let Err(e) = state
+        .manager
+        .add_session(session_id.clone(), session, api_tx)
+        .await
+    {
         let _ = socket.send(Message::Text(
             json!({"type":"error","session_id":session_id,"code":"ADD_FAILED","message":e.to_string()}).to_string().into()
         )).await;
         return;
     }
 
-    let _ = socket.send(Message::Text(
-        json!({"type":"status","message":"connected","session_id":session_id}).to_string().into()
-    )).await;
+    let _ = socket
+        .send(Message::Text(
+            json!({"type":"status","message":"connected","session_id":session_id})
+                .to_string()
+                .into(),
+        ))
+        .await;
 
     let sid = session_id.clone();
     loop {
@@ -91,11 +99,9 @@ async fn handle_ws(mut socket: WebSocket, state: Arc<AppState>) {
             msg = socket.recv() => {
                 match msg {
                     Some(Ok(Message::Text(text))) => {
-                        if let Ok(cmd) = serde_json::from_str::<Command>(&text) {
-                            if let Command::ControlEvent { event, .. } = cmd {
-                                let event_json = serde_json::to_string(&event).unwrap_or_default();
-                                state.manager.push_event(&sid, &event_json);
-                            }
+                        if let Ok(Command::ControlEvent { event, .. }) = serde_json::from_str::<Command>(&text) {
+                            let event_json = serde_json::to_string(&event).unwrap_or_default();
+                            state.manager.push_event(&sid, &event_json);
                         }
                     }
                     _ => break,

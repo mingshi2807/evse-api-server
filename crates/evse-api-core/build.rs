@@ -20,8 +20,14 @@ fn main() {
         .flag("-fPIC")
         .compile("iso15118_c");
 
-    println!("cargo:rustc-link-search=native={}", build_dir.join("src/iso15118").display());
-    println!("cargo:rustc-link-search=native={}", build_dir.join("api/c").display());
+    println!(
+        "cargo:rustc-link-search=native={}",
+        build_dir.join("src/iso15118").display()
+    );
+    println!(
+        "cargo:rustc-link-search=native={}",
+        build_dir.join("api/c").display()
+    );
     println!("cargo:rustc-link-search=native={}", cbv2g_dir.display());
 
     println!("cargo:rustc-link-lib=static=iso15118");
@@ -33,6 +39,12 @@ fn main() {
     println!("cargo:rustc-link-lib=crypto");
     println!("cargo:rustc-link-lib=dylib=stdc++");
 
-    println!("cargo:rerun-if-changed={}", lib_dir.join("api/c/iso15118_c.cpp").display());
-    println!("cargo:rerun-if-changed={}", lib_dir.join("api/c/iso15118_c.h").display());
+    println!(
+        "cargo:rerun-if-changed={}",
+        lib_dir.join("api/c/iso15118_c.cpp").display()
+    );
+    println!(
+        "cargo:rerun-if-changed={}",
+        lib_dir.join("api/c/iso15118_c.h").display()
+    );
 }

@@ -1,10 +1,10 @@
+pub mod error;
 pub mod ffi;
-pub mod session;
 pub mod manager;
 pub mod protocol;
-pub mod error;
+pub mod session;
 
-pub use session::Session;
-pub use manager::SessionManager;
-pub use protocol::{Command, ServerEvent, ControlEventPayload};
 pub use error::EvseApiError;
+pub use manager::SessionManager;
+pub use protocol::{Command, ControlEventPayload, ServerEvent};
+pub use session::Session;

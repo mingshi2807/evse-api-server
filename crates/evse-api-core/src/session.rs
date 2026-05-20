@@ -1,4 +1,4 @@
-use std::ffi::{c_char, c_void, CStr, CString};
+use std::ffi::{CStr, CString, c_char, c_void};
 use tokio::sync::mpsc;
 
 use crate::error::EvseApiError;
@@ -27,16 +27,18 @@ impl Session {
             ffi::iso15118_session_set_callback(ptr, session_event_callback, userdata);
         }
 
-        Ok((Session { ptr, _event_tx: event_tx }, event_rx))
+        Ok((
+            Session {
+                ptr,
+                _event_tx: event_tx,
+            },
+            event_rx,
+        ))
     }
 
     pub fn poll(&self) -> Option<u32> {
         let delay = unsafe { ffi::iso15118_session_poll(self.ptr) };
-        if delay < 0 {
-            None
-        } else {
-            Some(delay as u32)
-        }
+        if delay < 0 { None } else { Some(delay as u32) }
     }
 
     pub fn push_event(&self, event_json: &str) {
@@ -61,6 +63,8 @@ unsafe impl Sync for Session {}
 unsafe extern "C" fn session_event_callback(userdata: *mut c_void, json_event: *const c_char) {
     let tx: &mpsc::UnboundedSender<String> =
         unsafe { &*(userdata as *const mpsc::UnboundedSender<String>) };
-    let event = unsafe { CStr::from_ptr(json_event) }.to_string_lossy().into_owned();
+    let event = unsafe { CStr::from_ptr(json_event) }
+        .to_string_lossy()
+        .into_owned();
     let _ = tx.send(event);
 }

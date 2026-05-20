@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::{mpsc, RwLock};
-use tokio::time::{interval, Duration};
+use tokio::sync::{RwLock, mpsc};
+use tokio::time::{Duration, interval};
 
 use crate::error::EvseApiError;
 use crate::session::Session;
@@ -28,6 +28,12 @@ enum ManagerCommand {
     },
     #[allow(dead_code)]
     Shutdown,
+}
+
+impl Default for SessionManager {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl SessionManager {

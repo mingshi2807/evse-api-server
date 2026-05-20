@@ -9,7 +9,12 @@ pub enum Command {
     Configure { config: EvseConfig },
 
     #[serde(rename = "start")]
-    Start { interface: String, tls: bool, #[serde(default = "default_port")] port: u16 },
+    Start {
+        interface: String,
+        tls: bool,
+        #[serde(default = "default_port")]
+        port: u16,
+    },
 
     #[serde(rename = "stop")]
     Stop,
@@ -24,7 +29,9 @@ pub enum Command {
     Subscribe { categories: Vec<String> },
 }
 
-fn default_port() -> u16 { 50000 }
+fn default_port() -> u16 {
+    50000
+}
 
 #[derive(Debug, Deserialize)]
 pub struct EvseConfig {
@@ -96,9 +103,7 @@ pub enum ControlEventPayload {
     },
 
     #[serde(rename = "AcTransferLimits")]
-    AcTransferLimits {
-        charge_power: MinMax,
-    },
+    AcTransferLimits { charge_power: MinMax },
 
     #[serde(rename = "UpdateDynamicModeParameters")]
     UpdateDynamicModeParameters {
@@ -147,16 +152,10 @@ pub struct CurrentMax {
 #[serde(tag = "type")]
 pub enum ServerEvent {
     #[serde(rename = "signal")]
-    Signal {
-        session_id: String,
-        signal: String,
-    },
+    Signal { session_id: String, signal: String },
 
     #[serde(rename = "state_change")]
-    StateChange {
-        session_id: String,
-        state: String,
-    },
+    StateChange { session_id: String, state: String },
 
     #[serde(rename = "v2g_message")]
     V2gMessage {
@@ -165,10 +164,7 @@ pub enum ServerEvent {
     },
 
     #[serde(rename = "evcc_id")]
-    EvccId {
-        session_id: String,
-        evcc_id: String,
-    },
+    EvccId { session_id: String, evcc_id: String },
 
     #[serde(rename = "selected_protocol")]
     SelectedProtocol {
@@ -202,8 +198,5 @@ pub enum ServerEvent {
     },
 
     #[serde(rename = "session_closed")]
-    SessionClosed {
-        session_id: String,
-        reason: String,
-    },
+    SessionClosed { session_id: String, reason: String },
 }

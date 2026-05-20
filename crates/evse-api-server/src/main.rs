@@ -1,10 +1,10 @@
 mod server;
 
+use evse_api_core::manager::SessionManager;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::net::TcpListener;
 use tracing_subscriber::EnvFilter;
-use evse_api_core::manager::SessionManager;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
