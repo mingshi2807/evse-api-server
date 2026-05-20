@@ -26,6 +26,7 @@ enum ManagerCommand {
         id: String,
         event_json: String,
     },
+    #[allow(dead_code)]
     Shutdown,
 }
 
