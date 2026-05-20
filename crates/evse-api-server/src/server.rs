@@ -1,29 +1,50 @@
 use std::sync::Arc;
+use std::time::Instant;
 use axum::{
     Router,
     extract::ws::{Message, WebSocket, WebSocketUpgrade},
     extract::State,
-    response::IntoResponse,
+    response::Json,
     routing::get,
 };
+use serde_json::json;
 use tokio::sync::mpsc;
 use evse_api_core::{manager::SessionManager, session::Session, protocol::Command};
 
 pub struct AppState {
     pub manager: Arc<SessionManager>,
+    pub start_time: Instant,
 }
 
 pub fn build_router(manager: Arc<SessionManager>) -> Router {
-    let state = Arc::new(AppState { manager });
+    let state = Arc::new(AppState {
+        manager,
+        start_time: Instant::now(),
+    });
     Router::new()
         .route("/ws", get(ws_handler))
+        .route("/api/v1/health", get(health_handler))
+        .route("/api/v1/status", get(status_handler))
         .with_state(state)
+}
+
+async fn health_handler() -> Json<serde_json::Value> {
+    Json(json!({"status": "ok"}))
+}
+
+async fn status_handler(State(state): State<Arc<AppState>>) -> Json<serde_json::Value> {
+    Json(json!({
+        "status": "running",
+        "uptime_secs": state.start_time.elapsed().as_secs(),
+        "sessions": 0,
+        "version": env!("CARGO_PKG_VERSION"),
+    }))
 }
 
 async fn ws_handler(
     ws: WebSocketUpgrade,
     State(state): State<Arc<AppState>>,
-) -> impl IntoResponse {
+) -> axum::response::Response {
     ws.on_upgrade(move |socket| handle_ws(socket, state))
 }
 
@@ -37,7 +58,7 @@ async fn handle_ws(mut socket: WebSocket, state: Arc<AppState>) {
         Ok(s) => s,
         Err(e) => {
             let _ = socket.send(Message::Text(
-                serde_json::json!({"type":"error","session_id":session_id,"code":"INIT_FAILED","message":e.to_string()}).to_string().into()
+                json!({"type":"error","session_id":session_id,"code":"INIT_FAILED","message":e.to_string()}).to_string().into()
             )).await;
             return;
         }
@@ -45,13 +66,13 @@ async fn handle_ws(mut socket: WebSocket, state: Arc<AppState>) {
 
     if let Err(e) = state.manager.add_session(session_id.clone(), session, api_tx).await {
         let _ = socket.send(Message::Text(
-            serde_json::json!({"type":"error","session_id":session_id,"code":"ADD_FAILED","message":e.to_string()}).to_string().into()
+            json!({"type":"error","session_id":session_id,"code":"ADD_FAILED","message":e.to_string()}).to_string().into()
         )).await;
         return;
     }
 
     let _ = socket.send(Message::Text(
-        serde_json::json!({"type":"status","message":"connected","session_id":session_id}).to_string().into()
+        json!({"type":"status","message":"connected","session_id":session_id}).to_string().into()
     )).await;
 
     let sid = session_id.clone();
