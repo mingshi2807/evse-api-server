@@ -180,7 +180,7 @@ dependencies = [
 
 [[package]]
 name = "evse-api-core"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "cc",
  "serde",
@@ -193,7 +193,7 @@ dependencies = [
 
 [[package]]
 name = "evse-api-server"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "axum",
  "evse-api-core",
