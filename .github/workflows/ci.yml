@@ -1,0 +1,114 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  build-libiso15118:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout libiso15118
+        uses: actions/checkout@v4
+        with:
+          repository: mingshi2807/libiso15118
+          path: libiso15118
+
+      - name: Install deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build libssl-dev
+
+      - name: Build libiso15118 + C wrapper
+        run: |
+          cd libiso15118
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTING=OFF \
+            -DDISABLE_EDM=ON \
+            -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+          cmake --build build -j$(nproc)
+
+      - name: Archive artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: libiso15118-artifacts
+          path: |
+            libiso15118/build/src/iso15118/libiso15118.a
+            libiso15118/build/_deps/libcbv2g-build/lib/cbv2g/
+            libiso15118/api/c/
+            libiso15118/include/
+
+  build-and-test:
+    needs: build-libiso15118
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download libiso15118 artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: libiso15118-artifacts
+          path: ../libiso15118/build
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install deps
+        run: sudo apt-get install -y libssl-dev
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cargo check
+        run: cargo check
+
+      - name: Cargo clippy
+        run: cargo clippy -- -D warnings
+
+      - name: Cargo fmt check
+        run: cargo fmt --check
+
+      - name: Cargo test
+        run: cargo test --lib
+
+      - name: Build release
+        run: cargo build --release
+
+  e2e:
+    needs: build-and-test
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download libiso15118 artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: libiso15118-artifacts
+          path: ../libiso15118/build
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install deps
+        run: |
+          sudo apt-get install -y libssl-dev curl
+          cargo install websocat
+
+      - name: Build release
+        run: cargo build --release
+
+      - name: E2E test
+        run: ./tools/e2e_test.sh
