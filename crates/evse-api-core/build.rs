@@ -8,7 +8,7 @@ fn main() {
         .unwrap()
         .join("libiso15118.git");
 
-    let build_dir = lib_dir.join("build");
+    let build_dir = lib_dir.join("build_prod");
     let cbv2g_dir = build_dir.join("_deps/libcbv2g-build/lib/cbv2g");
 
     cc::Build::new()
