@@ -117,7 +117,7 @@
     "comment": "[24] ScheduleExchangeReq",
     "action": "send",
     "payload_type": "0x8002",
-    "exi_hex": "806c0423fe9da78992abe50cee2c4b70627e84280e008300a010602803f00280000480e0418050400002a2aaa903275726e3a69736f3a7374643a69736f3a31353131383a2d32303a5072696365416c676f726974686d3a312d506f7765720000200000100000140"
+    "exi_hex": "806c041c90580237257c848d6b0c4b70627e80a03803c14020c0a0106078083113020c0140800000"
   },
   {
     "action": "wait",
@@ -210,6 +210,6 @@
   },
   {
     "action": "close",
-    "comment": "ac_der_iec flow complete"
+    "comment": "AC DER IEC flow complete"
   }
 ]
