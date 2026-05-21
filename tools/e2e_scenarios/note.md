@@ -325,3 +325,12 @@ println!("cargo:rustc-link-lib=static=clang_rt.profile-x86_64");
 
 But the dual-directory approach is preferred — it keeps coverage out of the
 Rust link line and avoids hardcoding clang version paths.
+
+Updated part 2 (21 / Mai / 2026)
+The e2e_scenarios and note.md now cover:
+
+- The root cause (BUILD_TESTING=ON → coverage flags → llvm_gcda_* undefined symbols)
+- The two-directory solution (build_prod/ for Rust FFI, build/ for EXI extraction)
+- The exact cmake commands for each
+- The build.rs path difference (build_prod vs build)
+- The temporary fallback (linking libclang_rt.profile-x86_64.a directly) if only one build exists
