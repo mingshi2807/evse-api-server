@@ -244,3 +244,84 @@ Note: a previous attempt at a standalone extractor (`tools/exi_extractor.cpp`)
 was removed because it required the private test header `helper.hpp` and could
 not be linked from outside the test directory. The test-patching approach above
 is the canonical method.
+
+
+## Dual Build Directories — Production vs Testing
+
+libiso15118 uses **two separate CMake build directories** to avoid coverage
+instrumentation leaking into the Rust binary:
+
+```
+libiso15118.git/
+├── build/          # BUILD_TESTING=ON  (with coverage)
+│   ├── src/iso15118/libiso15118.a      ← instrumented, needs libclang_rt.profile
+│   └── test/exi/cb/iso20/test_exi_*    ← used for EXI payload extraction
+│
+└── build_prod/     # BUILD_TESTING=OFF (no coverage)
+    ├── src/iso15118/libiso15118.a      ← clean, no extra linker deps
+    └── api/c/libiso15118_c.a           ← clean
+```
+
+### Why Two Builds?
+
+When `BUILD_TESTING=ON`, the cmake coverage module (`everest-cmake/CodeCoverage.cmake`)
+calls `append_coverage_compiler_flags_to_target(iso15118)`, which adds
+`-fprofile-arcs -ftest-coverage` (clang) to every object in `libiso15118.a`.
+This injects `llvm_gcda_*` symbol references into the archive.
+
+When `cargo run` links the Rust binary against the instrumented `libiso15118.a`,
+the linker fails with:
+
+```
+undefined symbol: llvm_gcda_start_file
+undefined symbol: llvm_gcda_emit_function
+undefined symbol: llvm_gcda_emit_arcs
+undefined symbol: llvm_gcda_summary_info
+undefined symbol: llvm_gcda_end_file
+undefined symbol: llvm_gcov_init
+```
+
+These symbols live in `libclang_rt.profile-x86_64.a` (compiler-rt), which is
+not on the Rust link line. The fix: point the Rust `build.rs` at `build_prod/`.
+
+### Setup Commands
+
+```bash
+cd ~/workspace/libiso15118.git
+
+# Production build (for Rust FFI)
+CC=clang-15 CXX=clang++-15 cmake -S . -B build_prod -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DBUILD_TESTING=OFF \
+  -DDISABLE_EDM=ON \
+  -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+cmake --build build_prod --target iso15118 iso15118_c -j$(nproc)
+
+# Testing build (for EXI payload extraction)
+CC=clang-15 CXX=clang++-15 cmake -S . -B build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DBUILD_TESTING=ON \
+  -DDISABLE_EDM=ON \
+  -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+cmake --build build --target ...test_exi_*... -j$(nproc)
+```
+
+The Rust `build.rs` then links against `build_prod/`:
+
+```rust
+let build_dir = lib_dir.join("build_prod");  // NOT "build"
+```
+
+### Quick Fix (if you accidentally built only `build/` with testing)
+
+If the `build_prod/` directory doesn't exist and `build/` has coverage, you can
+temporarily link the clang runtime profile library by adding to `build.rs`:
+
+```rust
+println!("cargo:rustc-link-search=native=/usr/lib/llvm-15/lib/clang/15.0.7/lib/linux");
+println!("cargo:rustc-link-lib=static=clang_rt.profile-x86_64");
+```
+
+But the dual-directory approach is preferred — it keeps coverage out of the
+Rust link line and avoids hardcoding clang version paths.
