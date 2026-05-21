@@ -197,3 +197,50 @@ The e2e_scenarios and note.md now cover:
 - Payload type mapping — SAP / Part20Main / Part20DC / Part20AC
 - Regeneration procedure — after upstream libiso15118 changes
 - Usage example — evcc_emulator.py invocation for each scenario
+
+
+## DER Payload Extraction — Concrete HOWTO (Method B)
+
+The `ac_der_iec.json` DER-specific payloads were extracted by temporarily
+patching the test sources to print serialized hex bytes. Here's the exact
+procedure:
+
+```bash
+cd ~/workspace/libiso15118.git
+
+# 1. Backup originals
+cp test/exi/cb/iso20/ac_charge_loop.cpp{,.bak}
+cp test/exi/cb/iso20/ac_charge_parameter_discovery.cpp{,.bak}
+
+# 2. Patch: add hex dump after each serialize_helper() call
+#    These are at 4 locations (2 per file):
+#      ac_charge_loop.cpp:353  → DER dynamic AC CL Req
+#      ac_charge_loop.cpp:418  → DER dynamic AC CL Res + DSO
+#      ac_charge_parameter_discovery.cpp:267  → DER AC CPD Req
+#      ac_charge_parameter_discovery.cpp:338  → DER AC CPD Res
+#
+#    Insert after each "const auto serialized = serialize_helper(req|res);":
+#      fprintf(stderr, "HEX ");
+#      for (auto b : serialized) fprintf(stderr, "%02x", b);
+#      fprintf(stderr, "\n");
+#
+#    (This was done via code_execution — ask DeepSeek to apply the patch.)
+
+# 3. Rebuild only the two affected test binaries
+cmake --build build \
+  --target test_exi_ac_charge_loop test_exi_ac_charge_parameter_discovery \
+  -j$(nproc)
+
+# 4. Run and capture the hex output
+./build/test/exi/cb/iso20/test_exi_ac_charge_loop 2>&1 | grep "^HEX "
+./build/test/exi/cb/iso20/test_exi_ac_charge_parameter_discovery 2>&1 | grep "^HEX "
+
+# 5. Restore originals
+mv test/exi/cb/iso20/ac_charge_loop.cpp{.bak,}
+mv test/exi/cb/iso20/ac_charge_parameter_discovery.cpp{.bak,}
+```
+
+Note: a previous attempt at a standalone extractor (`tools/exi_extractor.cpp`)
+was removed because it required the private test header `helper.hpp` and could
+not be linked from outside the test directory. The test-patching approach above
+is the canonical method.
