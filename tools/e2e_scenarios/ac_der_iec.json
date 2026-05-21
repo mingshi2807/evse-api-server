@@ -22,7 +22,7 @@
     "comment": "[4] SessionSetupReq",
     "action": "send",
     "payload_type": "0x8002",
-    "exi_hex": "8090177d4a6e3dc88c9f9c2bd06251114a941396914c4c8ccd4a8c40"
+    "exi_hex": "808c9f9c2bd0622ba6a4ab1899199a1a9b1b9c1c9820a121a222ac"
   },
   {
     "action": "wait",
@@ -41,7 +41,7 @@
     "comment": "[8] AuthorizationReq",
     "action": "send",
     "payload_type": "0x8002",
-    "exi_hex": "800404790c8adceeee09688d6cac3a60620000"
+    "exi_hex": "800004790c8adceeee09688d6cac3a606200"
   },
   {
     "action": "wait",
@@ -210,6 +210,6 @@
   },
   {
     "action": "close",
-    "comment": "AC DER IEC Dynamic flow complete"
+    "comment": "ac_der_iec flow complete"
   }
 ]
