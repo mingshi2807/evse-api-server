@@ -170,3 +170,109 @@ tokio runtime (multi-threaded)
 ```
 
 All C++ code runs on a single tokio worker via the SessionManager task — matching libiso15118's single-threaded design. No locks needed for session state. Only the `mpsc::unbounded_channel` bridges tasks (lock-free).
+
+
+## WebSocket Client (websocat) — Session Activator
+
+### What it is
+
+`websocat` is a command-line WebSocket client. In the EVSE API server
+architecture, it serves as the **session activator** — the external EVSE
+application that triggers creation of a libiso15118 charging session.
+
+### Where it fits
+
+```
+┌─────────────┐     WebSocket (ws://host:8080/ws)     ┌──────────────────┐
+│  websocat    │ ───────────────────────────────────→ │  evse-api-server │
+│  (Terminal 2)│ ←─────────────────────────────────── │  (Rust + axum)   │
+└─────────────┘     JSON events (status/signal/etc.)  └────────┬─────────┘
+                                                                │
+                                                   creates Session
+                                                   starts TCP listener
+                                                                │
+                                                    TCP port 50000 (V2GTP)
+                                                                │
+                                                   ┌────────────▼─────────┐
+                                                   │  EVCC Emulator       │
+                                                   │  (Terminal 3)        │
+                                                   └──────────────────────┘
+```
+
+### Why it's needed
+
+libiso15118 runs its own TCP listener (V2GTP + EXI) on port 50000,
+independent from the Rust WebSocket server on port 8080. The TCP listener
+does **not** start automatically when `cargo run` starts the Rust server.
+
+Instead, the TCP listener is created **lazily** inside a `Session` object.
+A `Session` is created only when a WebSocket client connects to
+`ws://host:8080/ws` and the `handle_ws` function calls `Session::new(cfg_json)`.
+
+Without an active WebSocket connection, port 50000 is closed and the EVCC
+emulator gets `ConnectionRefusedError`.
+
+### How it triggers Session creation
+
+When `websocat` connects, the Rust server's `handle_ws` function:
+
+1. Generates a UUID session ID
+2. Creates a libiso15118 `Session` via the C FFI bridge:
+   ```
+   Session::new(config_json)
+     → CString::new(config_json)
+     → unsafe { iso15118_session_create(c_json) }
+     → parse EvseSetupConfig from JSON
+     → return opaque C handle
+   ```
+3. Registers the session with `SessionManager` (tokio poll loop)
+4. Sends `{"type":"status","message":"connected","session_id":"..."}` back over WS
+5. Enters a `tokio::select!` loop that:
+   - Forwards C callbacks (signals, V2GTP messages, errors) to the WS client
+   - Forwards WS control events to the C session
+   - Monitors WS connection state
+
+On the **first** `SessionManager.poll()` tick (50ms later), the C wrapper's
+`iso15118_session_poll()` lazily initializes the `ConnectionPlain`, which:
+- Binds an IPv6 socket to the configured interface
+- Listens on port 50000 for incoming V2GTP TCP connections
+- Registers with the `PollManager` for readiness events
+
+### Three-terminal workflow
+
+```
+Terminal 1                    Terminal 2                  Terminal 3
+(cargo run)                   (websocat)                  (evcc_emulator.py)
+──────────                    ──────────                  ─────────────────
+
+$ cargo run
+→ Server starts on :8080
+  (no session yet)
+                              $ websocat ws://...
+                              → WS handshake
+                                Session created
+                                TCP listener on :50000
+                                ← {"type":"status",...}
+                                                            $ ./evcc_emulator.py
+                                                            → connects to :50000
+                                                            → sends V2GTP packets
+                                
+  C callbacks fire            ← JSON events forwarded       ← TCP responses
+  on SessionManager thread      to WS client                  from libiso15118
+  
+                              (keep websocat open to
+                               maintain the session)
+```
+
+### Important: keep websocat running
+
+The WebSocket connection must stay **open** while the EVCC emulator runs.
+
+If `websocat` disconnects (e.g., `timeout 5 websocat ...`), the
+`handle_ws` async function returns, but the `Session` object is still
+owned by the `SessionManager` and continues to be polled. The TCP listener
+remains active as long as `session.poll()` does not return `-1`.
+
+However, if the session is still initializing when websocat exits, the
+session may be dropped prematurely. The safest practice: open websocat
+first, wait for the `"connected"` status, then run the emulator in T3.
