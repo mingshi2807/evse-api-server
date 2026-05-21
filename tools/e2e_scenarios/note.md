@@ -174,7 +174,7 @@ Available actions:
 # Against a running libiso15118 SECC listener (port 50000)
 ./tools/evcc_emulator.py \
   --scenario tools/e2e_scenarios/dc_scheduled.json \
-  --host ::1 --port 50000
+  --host 127.0.0.1 --port 50000
 
 # AC DER IEC flow
 ./tools/evcc_emulator.py \
@@ -186,3 +186,14 @@ The emulator frames each `exi_hex` payload with an 8-byte V2GTP header
 (protocol version 0x01, inverse 0xFE, payload type, length) and sends it
 over TCP. On `expect` steps, it reads the V2GTP header back and verifies
 the payload type matches.
+
+Updated (21 / Mai / 2026)
+The e2e_scenarios and note.md now cover:
+- Source map — which test file provides each message type
+- Build pipeline — cmake configuration, 17 EXI test binary targets
+- Two extraction methods — expected vectors (fast, most messages) vs. round-trip serialization (DER-specific, requires temporary
+  fprintf patching)
+- JSON format reference — all 4 action types with examples
+- Payload type mapping — SAP / Part20Main / Part20DC / Part20AC
+- Regeneration procedure — after upstream libiso15118 changes
+- Usage example — evcc_emulator.py invocation for each scenario

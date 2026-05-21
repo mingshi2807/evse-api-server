@@ -61,7 +61,8 @@ class ScenarioRunner:
         self.failed = 0
 
     def connect(self):
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        family = socket.AF_INET6 if ":" in self.host else socket.AF_INET
+        self.sock = socket.socket(family, socket.SOCK_STREAM)
         self.sock.settimeout(10.0)
         self.sock.connect((self.host, self.port))
         print(f"[EVCC] Connected to {self.host}:{self.port}")
