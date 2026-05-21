@@ -22,7 +22,7 @@
     "comment": "[4] SessionSetupReq",
     "action": "send",
     "payload_type": "0x8002",
-    "exi_hex": "808c9f9c2bd0622ba6a4ab1899199a1a9b1b9c1c9820a121a222ac"
+    "exi_hex": "808c0400000000000000000c9f9c2bd0620b2ba6a4ab1899199a1a9b1b9c1c9820a121a222ac00"
   },
   {
     "action": "wait",
