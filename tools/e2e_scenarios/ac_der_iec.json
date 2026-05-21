@@ -76,26 +76,7 @@
     "duration": 0.2
   },
   {
-    "comment": "[16] ServiceSelectionReq",
-    "action": "send",
-    "payload_type": "0x8002",
-    "exi_hex": "8084040275ff964a2ceda10e387e8a606201400880"
-  },
-  {
-    "action": "wait",
-    "duration": 0.2
-  },
-  {
-    "comment": "[18] ServiceSelectionRes",
-    "action": "expect",
-    "payload_type": "0x8002"
-  },
-  {
-    "action": "wait",
-    "duration": 0.2
-  },
-  {
-    "comment": "[20] ServiceDetailReq",
+    "comment": "[16] ServiceDetailReq",
     "action": "send",
     "payload_type": "0x8002",
     "exi_hex": "8074040275ff964a2ceda10e387e8a60620280"
@@ -105,7 +86,26 @@
     "duration": 0.2
   },
   {
-    "comment": "[22] ServiceDetailRes",
+    "comment": "[18] ServiceDetailRes",
+    "action": "expect",
+    "payload_type": "0x8002"
+  },
+  {
+    "action": "wait",
+    "duration": 0.2
+  },
+  {
+    "comment": "[20] ServiceSelectionReq",
+    "action": "send",
+    "payload_type": "0x8002",
+    "exi_hex": "8084040275ff964a2ceda10e387e8a606201400880"
+  },
+  {
+    "action": "wait",
+    "duration": 0.2
+  },
+  {
+    "comment": "[22] ServiceSelectionRes",
     "action": "expect",
     "payload_type": "0x8002"
   },
