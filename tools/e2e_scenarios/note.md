@@ -334,3 +334,65 @@ The e2e_scenarios and note.md now cover:
 - The exact cmake commands for each
 - The build.rs path difference (build_prod vs build)
 - The temporary fallback (linking libclang_rt.profile-x86_64.a directly) if only one build exists
+
+
+## Running the EVCC Emulator — Prerequisites
+
+The emulator connects to libiso15118's built-in TCP listener (port 50000), not
+to the Rust WebSocket server (port 8080). The TCP listener only starts after a
+WebSocket client connects and triggers Session creation.
+
+### Full Workflow
+
+```bash
+# Terminal 1: Start the Rust API server
+cd ~/workspace/evse-api-server
+cargo run
+# → EVSE API server listening on ws://0.0.0.0:8080
+
+# Terminal 2: Connect via WebSocket to trigger Session creation + TCP listener
+# This opens a WS connection, which creates a libiso15118 Session that
+# binds a TCP socket. Keep this connection open.
+websocat ws://127.0.0.1:8080/ws
+# → {"type":"status","message":"connected","session_id":"..."}
+
+# Terminal 3: Run the EVCC emulator against the libiso15118 TCP port
+./tools/evcc_emulator.py \
+  --scenario tools/e2e_scenarios/ac_der_iec.json \
+  --host 127.0.0.1 \
+  --port 50000
+```
+
+### Why This Two-Step Flow?
+
+- The Rust server (`evse-api-server`) exposes a WebSocket API for remote
+  EVSE applications to control charging sessions.
+- libiso15118 runs its own TCP listener (V2GTP + EXI) independently, bound
+  to the interface specified in the session config.
+- The WebSocket `handle_ws` creates a `Session(config_json)`, which
+  instantiates a `ConnectionPlain` that listens on the SDP port (default
+  50000). Until that WebSocket connects, no TCP listener exists.
+
+### Quick Test Without WebSocket
+
+For a fast smoke test of just the emulator scenario parser (bypassing
+libiso15118), use the mock mode:
+
+```bash
+# This only validates scenario JSON parsing — no TCP connection attempted
+python3 -c "
+import json
+with open('tools/e2e_scenarios/ac_der_iec.json') as f:
+    scenario = json.load(f)
+print(f'{len(scenario)} steps, no errors')
+"
+```
+
+### Error: ConnectionRefusedError [Errno 111]
+
+This means the libiso15118 TCP listener is not running. Ensure:
+- The Rust server is running (`cargo run`)
+- A WebSocket client has connected to `ws://127.0.0.1:8080/ws` (triggers
+  Session creation + TCP listener startup)
+- The session config specifies a reachable interface (see
+  `server.rs` for the hardcoded `cfg_json`)
