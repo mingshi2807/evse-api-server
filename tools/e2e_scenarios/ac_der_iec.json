@@ -171,23 +171,15 @@
     "duration": 0.2
   },
   {
-    "comment": "[36] SessionStopReq",
+    "comment": "[36] DER_AC_CLReq_Dynamic",
     "action": "send",
-    "payload_type": "0x8002",
-    "exi_hex": "8094041ea65fc99ba76c4d8d7bfe1b606228"
+    "payload_type": "0x8004",
+    "exi_hex": "8008041ea65fc99ba76c4d89ac0e1b60620199844c7867ed5b83040878170204360d81000020820dc0b02083b8140820ee0504000001000000400000200381740800f02e02003c0b81001780a04006f0101001bc040820cc080208298100820a6040400320040019004001900800bc0501001bc0402003780804006c02010015804040056010038106028041802810601e00"
   },
   {
-    "action": "wait",
-    "duration": 0.2
-  },
-  {
-    "comment": "[38] SessionStopRes",
+    "comment": "[38] DER_AC_CLRes_Dynamic_DSO",
     "action": "expect",
-    "payload_type": "0x8002"
-  },
-  {
-    "action": "wait",
-    "duration": 0.2
+    "payload_type": "0x8004"
   },
   {
     "action": "close",
