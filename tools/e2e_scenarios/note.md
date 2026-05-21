@@ -174,12 +174,12 @@ Available actions:
 # Against a running libiso15118 SECC listener (port 50000)
 ./tools/evcc_emulator.py \
   --scenario tools/e2e_scenarios/dc_scheduled.json \
-  --host 127.0.0.1 --port 50000
+  --host ::1 --port 50000
 
 # AC DER IEC flow
 ./tools/evcc_emulator.py \
   --scenario tools/e2e_scenarios/ac_der_iec.json \
-  --host 127.0.0.1 --port 50000
+  --host ::1 --port 50000
 ```
 
 The emulator frames each `exi_hex` payload with an 8-byte V2GTP header
