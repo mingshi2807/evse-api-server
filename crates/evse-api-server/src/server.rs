@@ -52,7 +52,7 @@ async fn handle_ws(mut socket: WebSocket, state: Arc<AppState>) {
     let session_id = uuid::Uuid::new_v4().to_string();
     let (api_tx, mut api_rx) = mpsc::unbounded_channel::<String>();
 
-    let cfg_json = r#"{"evse_id":"default","energy_services":["DC"],"auth_services":["EIM"],"control_mode":"Dynamic","mobility_mode":"ProvidedByEvcc","dc_limits":{"max_voltage":900,"max_current":250,"max_power":50000,"min_power":0}}"#;
+    let cfg_json = r#"{"evse_id":"default","interface":"lo","energy_services":["DC"],"auth_services":["EIM"],"control_mode":"Dynamic","mobility_mode":"ProvidedByEvcc","dc_limits":{"max_voltage":900,"max_current":250,"max_power":50000,"min_power":0}}"#;
 
     let (session, mut event_rx) = match Session::new(cfg_json) {
         Ok(s) => s,
